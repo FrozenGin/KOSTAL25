@@ -8,10 +8,8 @@ from picar import Picar
 
 app = Flask(__name__)
 
-OFFSET = 20
-
 # Global variables and constants
-OFFSET = 0  # Adjust as needed for servo calibration
+OFFSET = -20  # Adjust as needed for servo calibration
 lock = threading.Lock()
 current_qr = None
 camera_instance = None
@@ -38,7 +36,7 @@ def get_camera():
             try:
                 from picamera2 import Picamera2
                 picam2 = Picamera2()
-                config = picam2.create_video_configuration(main={"size": (1280, 720), "format": "RGB888"})
+                config = picam2.create_video_configuration(main={"size": (640, 480)})
                 picam2.configure(config)
                 picam2.start()
                 camera_instance = picam2
@@ -114,7 +112,7 @@ def perform_scan_sequence():
                 
                 # Return camera to center position
                 if picar:
-                    picar.set_camera_angle(0)
+                    picar.set_camera_angle(0+OFFSET)
                 
                 logging.info(f"QR code scan complete: {qr_data}")
                 return {'qr': qr_data}
@@ -129,7 +127,7 @@ def perform_scan_sequence():
     
     # Return camera to center position
     if picar:
-        picar.set_camera_angle(0)
+        picar.set_camera_angle(0+OFFSET)
     
     return {'qr': None}
 
@@ -231,10 +229,10 @@ def gen_frames():
                 time.sleep(0.1)
                 continue
                 
-            # Picamera2 gives RGB, OpenCV gives BGR
+            # Handle color format for different camera types
             if hasattr(camera, 'capture_array'):
-                # Picamera2 - convert RGB to BGR for cv2.imencode
-                bgr_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                # Picamera2 - frame is already in BGR format by default
+                bgr_frame = frame
             else:
                 # OpenCV - already in BGR
                 bgr_frame = frame
