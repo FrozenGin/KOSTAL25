@@ -11,19 +11,24 @@ class QRCamera:
     Rotates the camera left, center, right to scan for QR codes.
     """
     
-    def __init__(self, offset=-20):
+    def __init__(self, picar_instance=None, offset=-20):
         """
         Initialize the QR camera scanner.
         
         Args:
+            picar_instance (Picar): Existing Picar instance to use, or None to create new one
             offset (int): Servo calibration offset in degrees
         """
         self.offset = offset
         self.camera_instance = None
-        self.picar_instance = None
+        self.picar_instance = picar_instance
+        self.owns_picar = picar_instance is None  # Track if we created the picar instance
         
         # Initialize components
-        self._init_picar()
+        if self.picar_instance is None:
+            self._init_picar()
+        else:
+            logging.info("Using provided PiCar instance")
         self._init_camera()
     
     def _init_picar(self):
@@ -157,8 +162,8 @@ class QRCamera:
             finally:
                 self.camera_instance = None
         
-        # Cleanup PiCar
-        if self.picar_instance is not None:
+        # Cleanup PiCar (only if we own it)
+        if self.picar_instance is not None and self.owns_picar:
             try:
                 self.picar_instance.set_camera_angle(0)  # Return to center
                 self.picar_instance.exit()
@@ -171,6 +176,13 @@ class QRCamera:
                 logging.error(f"Error cleaning up PiCar: {e}")
             finally:
                 self.picar_instance = None
+        elif self.picar_instance is not None:
+            # Return camera to center but don't exit the picar instance
+            try:
+                self.picar_instance.set_camera_angle(0)
+                logging.info("Returned camera to center position")
+            except Exception as e:
+                logging.error(f"Error returning camera to center: {e}")
         
         logging.info("Cleanup!")
         
@@ -191,13 +203,18 @@ if __name__ == "__main__":
     # Example usage
     logging.basicConfig(level=logging.INFO)
     
-    # Using context manager (recommended)
+    # Method 1: Let QRCamera create its own PiCar instance
+    print("Method 1: QRCamera creates its own PiCar")
     with QRCamera() as qr_scanner:
         result = qr_scanner.start_scan()
         print(f"Scan result: {result}")
     
-    # Or manual cleanup
-    # qr_scanner = QRCamera()
-    # result = qr_scanner.start_scan()
-    # print(f"Scan result: {result}")
-    # qr_scanner.cleanup()
+    print("\nMethod 2: Pass existing PiCar instance")
+    # Method 2: Create PiCar separately and pass it to QRCamera
+    picar = Picar()
+    try:
+        with QRCamera(picar_instance=picar) as qr_scanner:
+            result = qr_scanner.start_scan()
+            print(f"Scan result: {result}")
+    finally:
+        picar.exit()  # Clean up the picar instance manually
