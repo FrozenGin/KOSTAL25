@@ -1,1 +1,5 @@
-__pycache__
+# Windows
+*/__pycache__/
+
+# Linux
+*\__pycache__\
