@@ -26,8 +26,16 @@ def process_qr_codes(qr_codes: List[Decoded]) -> None:
         data = qr_code.data.decode("utf-8")
         print(f"Detected QR code: {data}")
 
-while True:
-    # Capture and process QR codes
-    qr_codes = capture_qr_codes()
-    if qr_codes is not None:
-        process_qr_codes(qr_codes)
+
+def main():
+    print("Press Enter to scan for QR codes...")
+    while True:
+        input()  # Wait for button press (Enter key)
+        qr_codes = capture_qr_codes()
+        if qr_codes:
+            process_qr_codes(qr_codes)
+        else:
+            print("No QR code detected.")
+
+if __name__ == "__main__":
+    main()
